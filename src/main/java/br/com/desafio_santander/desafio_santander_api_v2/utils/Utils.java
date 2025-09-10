@@ -12,8 +12,5 @@ public static double calcDistance(double originX, double originY,
                     Math.pow(destinationY - originY, 2)); // ← CORRIGIDO!
 }
 
-// Exemplo de uso:
-// double distancia = calcularDistancia(usuario.getX(), usuario.getY(), 
-//                                     agencia1.getX(), agencia1.getY());
 
 }
