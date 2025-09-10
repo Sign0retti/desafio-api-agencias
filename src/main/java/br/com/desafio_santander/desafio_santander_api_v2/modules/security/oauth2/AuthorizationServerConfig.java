@@ -30,8 +30,6 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
-
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -56,13 +54,10 @@ public class AuthorizationServerConfig {
     @Bean
     @Order(1)
     public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
-        http.with(OAuth2AuthorizationServerConfigurer.authorizationServer(), Customizer.withDefaults());
-        
         http
-            .exceptionHandling(exceptions -> exceptions
-                .authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login"))
-            );
-
+            .securityMatcher("/oauth2/**")
+            .with(OAuth2AuthorizationServerConfigurer.authorizationServer(), Customizer.withDefaults())
+            .csrf(csrf -> csrf.disable());
         return http.build();
     }
 
@@ -70,16 +65,12 @@ public class AuthorizationServerConfig {
     @Order(2)
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
         http
+            .securityMatcher("/**")
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/user/create").permitAll()
-                .requestMatchers("/oauth2/**").permitAll()
-                .requestMatchers("/login").permitAll()
+                .requestMatchers("/token").permitAll()
                 .requestMatchers("/desafio/**").authenticated()
-                .anyRequest().authenticated()
-            )
-            .formLogin(form -> form
-                .loginPage("/login")
-                .permitAll()
+                .anyRequest().denyAll()
             )
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.decoder(jwtDecoder(keyPair()))))
             .csrf(csrf -> csrf.disable());
@@ -90,15 +81,12 @@ public class AuthorizationServerConfig {
     @Bean
     public RegisteredClientRepository registeredClientRepository(PasswordEncoder passwordEncoder) {
         RegisteredClient client = RegisteredClient.withId(UUID.randomUUID().toString())
-            .clientId("client-app")
-            .clientSecret(passwordEncoder.encode("secret123"))
+            .clientId("desafio-client")
+            .clientSecret(passwordEncoder.encode("desafio-secret"))
             .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
             .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_POST)
-            .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+            .authorizationGrantType(AuthorizationGrantType.PASSWORD)
             .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
-            .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
-            .redirectUri("http://localhost:8080/callback")
-            .redirectUri("http://localhost:8080/login/oauth2/code/client-app")
             .scope("read")
             .scope("write")
             .tokenSettings(TokenSettings.builder()
